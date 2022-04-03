@@ -1,4 +1,4 @@
-open Lexer
+open Parser
 open Printf
 
 let token_to_string = function
@@ -10,7 +10,7 @@ let token_to_string = function
   | FOR -> "FOR"
   | IF -> "IF"
   | ELSE -> "ELSE"
-  | RETURN -> "RETURN"
+  | RETURN _ -> "RETURN"
   | INT -> "INT"
   | FLOAT -> "FLOAT"
   | COMPLEX -> "COMPLEX"
@@ -33,21 +33,20 @@ let token_to_string = function
   | RPAREN -> "RPAREN"
   | LBRACE -> "LBRACE"
   | RBRACE -> "RBRACE"
-  | COLON -> "COLON"
   | COMMA -> "COMMA"
   | SEMICOLON -> "SEMICOLON"
   | PRINTLN -> "PRINTLN"
   | INT_LIT i -> sprintf "INT_LIT '%Li'" i
   | FLOAT_LIT f -> sprintf "FLOAT_LIT '%f'" f
-  | IMAG_LIT im -> sprintf "IMAG_LIT '%f'" im
+  | IMAG_LIT im -> sprintf "IMAG_LIT '%fi'" im
   | BOOL_LIT b -> sprintf "BOOL_LIT '%b'" b
   | STRING_LIT s -> sprintf "STRING_LIT '%s'" s
-  | IDENT id -> sprintf "IDENT '%s'" id
+  | IDENT id -> sprintf "IDENT '%s'" id.content
   | EOF -> "EOF"
 
 let print_tokens lexbuf =
   let rec get_tokens acc lexbuf =
-    let token = read_token lexbuf in
+    let token = Lexer.read_token lexbuf in
     match token with
     | EOF -> acc ^ "EOF"
     | _ ->

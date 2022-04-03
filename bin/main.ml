@@ -15,11 +15,19 @@ let () =
   };
 
   try
-    Print_tokens.print_tokens lexbuf;
+    (* Print_tokens.print_tokens lexbuf; *)
+    let prog = Parser.program Lexer.read_token lexbuf in
+    Print_ast.print_ast prog;
     close_in input
-  with Lexer.Error msg ->
+  with
+    | Lexer.Error msg ->
         Printf.fprintf
           stderr
           "%s %s\n"
           (Pretty_error.from_single_pos (Lexing.lexeme_start_p lexbuf))
           msg
+    | Parser.Error ->
+        Printf.fprintf
+          stderr
+          "%s syntax error\n"
+          (Pretty_error.from_single_pos (Lexing.lexeme_start_p lexbuf))

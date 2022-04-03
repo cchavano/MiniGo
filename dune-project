@@ -17,3 +17,5 @@
  (name mini_go)
  (synopsis "Transpiler from a subset of Go to C written in OCaml")
  (depends ocaml dune))
+
+(using menhir 2.1)

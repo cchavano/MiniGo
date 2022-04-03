@@ -1,32 +1,7 @@
 {  
   open Lexing
-  open Printf
-
-  type token =
-    | PACKAGE
-    | IMPORT
-    | FUNC
-    | VAR | CONST
-    | FOR
-    | IF | ELSE
-    | RETURN
-    | INT | FLOAT | COMPLEX | BOOL | STRING
-    | ASSIGN | DCL_ASSIGN
-    | PLUS | MINUS | MULT | DIV
-    | LESST | GREAT | EQUAL | NOT_EQUAL
-    | AND | OR
-    | NOT
-    | LPAREN| RPAREN | LBRACE | RBRACE
-    | COLON | COMMA | SEMICOLON
-    | PRINTLN
-    | INT_LIT of int64
-    | FLOAT_LIT of float
-    | IMAG_LIT of float
-    | BOOL_LIT of bool
-    | STRING_LIT of string
-    | IDENT of string
-    | EOF
-
+  open Parser
+  
   exception Error of string
 
   let keywords = Hashtbl.create 14
@@ -36,7 +11,7 @@
       (fun (s, t) -> Hashtbl.add keywords s t) 
       [
         "package", PACKAGE; "import", IMPORT; "func", FUNC; "var", VAR; "const", CONST;
-        "for", FOR; "if", IF; "else", ELSE; "return", RETURN; "int", INT; "float64", FLOAT;
+        "for", FOR; "if", IF; "else", ELSE; "int", INT; "float64", FLOAT;
         "complex128", COMPLEX; "bool", BOOL; "string", STRING
       ]
 
@@ -65,18 +40,18 @@ rule read_token = parse
   | "//" [^'\n']* '\n'
   | '\n'
     { 
-      let go_forward lexbuf = new_line lexbuf; read_token lexbuf in
-      if Option.is_some !prev_token then
-        begin
-          let value = Option.get !prev_token in
-          match value with
-          | IDENT _
-          | INT | FLOAT | COMPLEX | BOOL | STRING
-          | RPAREN | RBRACE
-          | RETURN -> new_line lexbuf; tok SEMICOLON
-          | _ -> go_forward lexbuf
-        end
-      else go_forward lexbuf
+      let move lexbuf = new_line lexbuf; read_token lexbuf in
+      let add_semi lexbuf = function
+        | IDENT _
+        | INT | FLOAT | COMPLEX | BOOL | STRING
+        | RPAREN | RBRACE
+        | INT_LIT _ | FLOAT_LIT _ | IMAG_LIT _ | BOOL_LIT _ | STRING_LIT _
+        | RETURN _ -> new_line lexbuf; tok SEMICOLON
+        | _ -> move lexbuf
+      in
+      match !prev_token with
+      | None -> move lexbuf
+      | Some v -> add_semi lexbuf v
     }
   | space+  { read_token lexbuf }
   | "/*"    { read_comment lexbuf }
@@ -85,7 +60,6 @@ rule read_token = parse
   | '{'     { tok LBRACE }
   | '}'     { tok RBRACE }
   | ','     { tok COMMA }
-  | ':'     { tok COLON }
   | ';'     { tok SEMICOLON }
   | ":="    { tok DCL_ASSIGN }
   | "="     { tok ASSIGN }
@@ -98,19 +72,25 @@ rule read_token = parse
   | "=="    { tok EQUAL }
   | "!="    { tok NOT_EQUAL }
   | "!"     { tok NOT }
+  | "||"    { tok OR }
+  | "&&"    { tok AND }
+  | "return"
+    {
+      tok @@ RETURN (Location.make (lexeme_start_p lexbuf) (lexeme_end_p lexbuf) "return")
+    }
   | int_lit as i
     {
       try
         tok @@ INT_LIT (Int64.of_string i)
       with Failure _ ->
-        error (sprintf "int literal '%s' overflows the maximum value of int64" i)   
+        error (Printf.sprintf "int literal '%s' overflows the maximum value of int64" i)   
     }
   | float_lit as f
     {
       try
         tok @@ FLOAT_LIT (float_of_string f)
       with Failure _ ->
-        error (sprintf "invalid float literal '%s'" f)
+        error (Printf.sprintf "invalid float literal '%s'" f)
     }
   | imag_lit as im
     {
@@ -118,7 +98,7 @@ rule read_token = parse
         let imag_part = String.sub im 0 (String.length im - 1) in
         tok @@ IMAG_LIT (float_of_string imag_part)
       with Failure _ ->
-          error (sprintf "invalid imaginary literal '%s'" im)
+          error (Printf.sprintf "invalid imaginary literal '%s'" im)
     }
   | bool_lit as b   { tok @@ BOOL_LIT (bool_of_string b) }
   | string_lit as s { tok @@ STRING_LIT s }
@@ -126,11 +106,12 @@ rule read_token = parse
     {
       try
         tok (Hashtbl.find keywords id)
-      with Not_found -> tok (IDENT id)
+      with Not_found ->
+        tok @@ IDENT (Location.make (lexeme_start_p lexbuf) (lexeme_end_p lexbuf) id)
     }
   | "fmt.Println"   { tok PRINTLN }
   | eof             { tok EOF }
-  | _ as c 
+  | _ as c
     {
       error (Printf.sprintf "illegal character '%s'" (String.make 1 c))
     }

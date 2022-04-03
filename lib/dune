@@ -2,3 +2,7 @@
  (name mini_go))
 
 (ocamllex lexer)
+
+(menhir
+ (modules parser)
+ (flags --explain))
