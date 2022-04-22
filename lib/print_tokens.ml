@@ -10,14 +10,14 @@ let token_to_string = function
   | FOR -> "FOR"
   | IF -> "IF"
   | ELSE -> "ELSE"
-  | RETURN _ -> "RETURN"
+  | RETURN -> "RETURN"
   | INT -> "INT"
   | FLOAT -> "FLOAT"
   | COMPLEX -> "COMPLEX"
   | BOOL -> "BOOL"
   | STRING -> "STRING"
   | ASSIGN -> "ASSIGN"
-  | DCL_ASSIGN -> "DCL_ASSIGN"
+  | DEFINE -> "DEFINE"
   | PLUS -> "PLUS"
   | MINUS -> "MINUS"
   | MULT -> "MULT"
@@ -50,7 +50,7 @@ let print_tokens lexbuf =
     match token with
     | EOF -> acc ^ "EOF"
     | _ ->
-      let acc' = sprintf "%s%s\n" acc (token_to_string token) in
-      get_tokens acc' lexbuf
+        let acc' = sprintf "%s%s\n" acc (token_to_string token) in
+        get_tokens acc' lexbuf
   in
-printf "%s\n" (get_tokens "" lexbuf)
+  printf "%s\n" (get_tokens "" lexbuf)

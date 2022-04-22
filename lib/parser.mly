@@ -8,9 +8,9 @@
 %token VAR CONST
 %token FOR
 %token IF ELSE
-%token <string Location.t> RETURN
+%token RETURN
 %token INT FLOAT COMPLEX BOOL STRING
-%token ASSIGN DCL_ASSIGN
+%token ASSIGN DEFINE
 %token PLUS MINUS MULT DIV
 %token LESST GREAT EQUAL NOT_EQUAL
 %token AND OR
@@ -51,7 +51,7 @@ program:
     }
 
 import:
-  | IMPORT pkg_name = STRING_LIT SEMICOLON { pkg_name }
+  | IMPORT pkg_name = STRING_LIT SEMICOLON { Location.make $startpos $endpos pkg_name }
 
 func_def:
   | FUNC name = IDENT
@@ -78,8 +78,8 @@ func_param:
   | id = IDENT param_typ = typ { (id, param_typ) }
 
 func_return:
-  | { None }
-  | RETURN return = option(expression) SEMICOLON { return }
+  | { Location.make $startpos $endpos None }
+  | RETURN return = option(expression) SEMICOLON { Location.make $startpos $endpos return }
 
 statement_ended:
   | st = statement SEMICOLON { st }
@@ -87,7 +87,7 @@ statement_ended:
 statement:
   | VAR id = IDENT var_typ = typ { StVarDecl (id, Some var_typ, None) }
   | VAR id = IDENT opt_typ = option(typ) ASSIGN e = expression { StVarDecl (id, opt_typ, Some e) }
-  | id = IDENT DCL_ASSIGN e = expression { StVarDecl (id, None, Some e) }
+  | id = IDENT DEFINE e = expression { StVarDecl (id, None, Some e) }
   | CONST id = IDENT opt_typ = option(typ) ASSIGN e = expression { StConstDecl (id, opt_typ, e) }
   | IF cond = expression sb1 = statement_block ELSE sb2 = statement_block { StIfElse (cond, sb1, sb2) }
   | FOR cond = expression sb = statement_block { StWhileFor (cond, sb) }
@@ -108,16 +108,11 @@ raw_expression:
   | id = IDENT LPAREN args = separated_list(COMMA, expression) RPAREN { EFuncCall (id, args) }
   | op = unary_op e = expression { EUnOp (op, e) }
   | e1 = expression op = binary_op e2 = expression { EBinOp (op, e1, e2) }
-  | typ = basic_typ LPAREN e = expression RPAREN { EValueCast (typ, e) }
+  | typ = typ LPAREN e = expression RPAREN { EConversion (typ, e) }
 
 typ:
   | basic_t = basic_typ { TypBasic basic_t }
   | func_t = func_typ { func_t }
-
-func_typ:  
-  | FUNC
-    LPAREN typ_list = separated_list(COMMA, typ) RPAREN
-    return_typ = basic_typ { TypFunc (typ_list, return_typ) }
 
 basic_typ:
   | INT { TypInt }
@@ -125,6 +120,11 @@ basic_typ:
   | COMPLEX { TypComplex }
   | BOOL { TypBool }
   | STRING { TypString }
+
+func_typ:  
+  | FUNC
+    LPAREN params_t = separated_list(COMMA, typ) RPAREN
+    result_t = option(basic_typ) { TypFunc (params_t, result_t) }
 
 literal:
   | i = INT_LIT { LitInt i }
@@ -144,9 +144,9 @@ literal:
   | op = logic_op { OpLogic op }
 
 %inline arithmetic_op:
-  | PLUS { OpPlus }
-  | MINUS { OpMinus }
-  | MULT { OpMult }
+  | PLUS { OpAdd }
+  | MINUS { OpSub }
+  | MULT { OpMul }
   | DIV { OpDiv }
 
 %inline compare_op:

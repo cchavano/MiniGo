@@ -10,8 +10,8 @@
     List.iter
       (fun (s, t) -> Hashtbl.add keywords s t) 
       [
-        "package", PACKAGE; "import", IMPORT; "func", FUNC; "var", VAR; "const", CONST;
-        "for", FOR; "if", IF; "else", ELSE; "int", INT; "float64", FLOAT;
+        "package", PACKAGE; "import", IMPORT; "func", FUNC; "return", RETURN; "var", VAR;
+        "const", CONST; "for", FOR; "if", IF; "else", ELSE; "int", INT; "float64", FLOAT;
         "complex128", COMPLEX; "bool", BOOL; "string", STRING
       ]
 
@@ -27,12 +27,13 @@
 let digit = ['0'-'9']
 let letter = ['a'-'z''A'-'Z']
 let space = [' ''\t''\r']
+let ponctuation = ['!''.'':'','';''?']
 
 let int_lit = (digit (digit | '_')*)* digit
 let float_lit = (int_lit '.' int_lit?) | (int_lit? '.' int_lit)
 let imag_lit = (int_lit | float_lit) 'i'
 let bool_lit = "true" | "false"
-let string_lit = '"' (letter | digit | space | '_')* '"'
+let string_lit = '"' (letter | digit | space | ponctuation | '_' )* '"'
 
 let ident = letter (letter | digit | '_')*
 
@@ -46,7 +47,7 @@ rule read_token = parse
         | INT | FLOAT | COMPLEX | BOOL | STRING
         | RPAREN | RBRACE
         | INT_LIT _ | FLOAT_LIT _ | IMAG_LIT _ | BOOL_LIT _ | STRING_LIT _
-        | RETURN _ -> new_line lexbuf; tok SEMICOLON
+        | RETURN -> new_line lexbuf; tok SEMICOLON
         | _ -> move lexbuf
       in
       match !prev_token with
@@ -61,7 +62,7 @@ rule read_token = parse
   | '}'     { tok RBRACE }
   | ','     { tok COMMA }
   | ';'     { tok SEMICOLON }
-  | ":="    { tok DCL_ASSIGN }
+  | ":="    { tok DEFINE }
   | "="     { tok ASSIGN }
   | "+"     { tok PLUS }
   | "-"     { tok MINUS }
@@ -74,10 +75,6 @@ rule read_token = parse
   | "!"     { tok NOT }
   | "||"    { tok OR }
   | "&&"    { tok AND }
-  | "return"
-    {
-      tok @@ RETURN (Location.make (lexeme_start_p lexbuf) (lexeme_end_p lexbuf) "return")
-    }
   | int_lit as i
     {
       try
