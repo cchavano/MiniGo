@@ -1,4 +1,4 @@
 (executable
  (public_name mini-go)
  (name main)
- (libraries mini_go))
+ (libraries mini_go unix))

@@ -8,7 +8,7 @@ let branch_end = "\xe2\x94\x94"
 
 let pipe = "\xe2\x94\x82"
 
-let indentation = String.make 2 ' '
+let indent = String.make 2 ' '
 
 let option_to_string empty f = function
   | None -> empty
@@ -64,14 +64,14 @@ let rec typ_to_string = function
 
 and typ_list_to_string = function
   | [] -> ""
-  | [ x ] -> sprintf "%s" (typ_to_string x)
+  | [x] -> sprintf "%s" (typ_to_string x)
   | x :: r -> sprintf "%s %s" (typ_to_string x) (typ_list_to_string r)
 
 let list_to_string f prefix l =
-  let prefix' = prefix ^ indentation in
+  let prefix' = prefix ^ indent in
   let rec lts = function
     | [] -> ""
-    | [ x ] -> sprintf "%s%s%s" prefix' branch_end (f (prefix' ^ " ") x)
+    | [x] -> sprintf "%s%s%s" prefix' branch_end (f (prefix' ^ " ") x)
     | x :: r ->
         sprintf "%s%s%s\n%s" prefix' branch (f (prefix' ^ pipe) x) (lts r)
   in
@@ -81,7 +81,7 @@ let rec expression_to_string prefix loc =
   raw_expression_to_string prefix loc.content
 
 and raw_expression_to_string prefix e =
-  let prefix' = prefix ^ indentation in
+  let prefix' = prefix ^ indent in
   match e with
   | ELiteral lit -> sprintf "ELiteral (%s)" (literal_to_string lit)
   | EIdentRef id -> sprintf "EIdentRef '%s'" id.content
@@ -125,7 +125,7 @@ and expression_list_to_string prefix l =
   list_to_string expression_to_string prefix l
 
 let rec statement_to_string prefix s =
-  let prefix' = prefix ^ indentation in
+  let prefix' = prefix ^ indent in
   match s with
   | StVarDecl (id, t, e) ->
       let expr =
@@ -196,7 +196,7 @@ let rec func_list_to_string prefix l = list_to_string func_to_string prefix l
 
 and param_list_to_string = function
   | [] -> ""
-  | [ x ] -> sprintf "%s %s" (fst x).content (typ_to_string @@ snd x)
+  | [x] -> sprintf "%s %s" (fst x).content (typ_to_string @@ snd x)
   | x :: r ->
       sprintf
         "%s %s, %s"
@@ -205,16 +205,16 @@ and param_list_to_string = function
         (param_list_to_string r)
 
 and func_to_string prefix func =
-  let prefix' = prefix ^ indentation in
+  let prefix' = prefix ^ indent in
   let returned_expr =
     match func.return.content with
     | None -> ""
     | Some v ->
         sprintf
           "\n%s%s%s"
-          (prefix' ^ indentation)
+          (prefix' ^ indent)
           branch_end
-          (expression_to_string (prefix' ^ indentation) v)
+          (expression_to_string (prefix' ^ indent) v)
   in
   sprintf
     "FuncDecl '%s'\n%s%sparams (%s)\n%s%sbody%s%s\n%s%sresult %s\n%s%sreturn%s"

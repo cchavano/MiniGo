@@ -7,3 +7,4 @@ module-item-spacing = sparse
 break-cases = fit-or-vertical
 wrap-fun-args = false
 exp-grouping = preserve
+space-around-lists = false

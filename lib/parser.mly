@@ -109,6 +109,7 @@ raw_expression:
   | op = unary_op e = expression { EUnOp (op, e) }
   | e1 = expression op = binary_op e2 = expression { EBinOp (op, e1, e2) }
   | typ = typ LPAREN e = expression RPAREN { EConversion (typ, e) }
+  | LPAREN typ = typ RPAREN LPAREN e = expression RPAREN { EConversion (typ, e) }
 
 typ:
   | basic_t = basic_typ { TypBasic basic_t }

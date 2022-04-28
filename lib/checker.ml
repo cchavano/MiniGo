@@ -92,7 +92,7 @@ let rec typ_to_string = function
 
 and typ_list_to_string = function
   | [] -> ""
-  | [ x ] -> sprintf "%s" (typ_to_string x)
+  | [x] -> sprintf "%s" (typ_to_string x)
   | x :: r -> sprintf "%s %s" (typ_to_string x) (typ_list_to_string r)
 
 let rec expression_to_string e = raw_expression_to_string e.raw
@@ -115,7 +115,7 @@ and raw_expression_to_string = function
 and expression_list_to_string l =
   match l with
   | [] -> ""
-  | [ x ] -> expression_to_string x
+  | [x] -> expression_to_string x
   | x :: r ->
       sprintf "%s, %s" (expression_to_string x) (expression_list_to_string r)
 
@@ -124,11 +124,11 @@ let expression_info_to_string e =
   let value_or_empty e =
     match e.raw with
     | ELiteral _ -> ""
-    | _ -> value_to_string (Option.get e.value)
+    | _ -> " " ^ value_to_string (Option.get e.value)
   in
   match e.mode with
   | ModUntyped ->
-      sprintf "untyped %s constant %s" typ_as_string (value_or_empty e)
+      sprintf "untyped %s constant%s" typ_as_string (value_or_empty e)
   | ModConstant ->
       sprintf "constant %s of type %s" (value_or_empty e) typ_as_string
   | ModVariable -> sprintf "variable of type %s" typ_as_string
@@ -211,11 +211,8 @@ let check_conversion typ e =
       ( begin
           let v = Option.get e.value in
           let basic_t = const_basic_typ typ in
-          match (v, basic_t) with
-          | ValInt i, TypString -> Some (ValString (Int64.to_string i))
-          | _ ->
-              if is_representable typ e then representation v basic_t
-              else raise Invalid_conversion
+          if is_representable typ e then representation v basic_t
+          else raise Invalid_conversion
         end,
         ModConstant )
     else
@@ -225,7 +222,7 @@ let check_conversion typ e =
           match (typ, e.typ) with
           | TypBasic b1, TypBasic b2 -> (
               match (b1, b2) with
-              | TypInt, TypFloat | TypFloat, TypInt | TypString, TypInt -> true
+              | TypInt, TypFloat | TypFloat, TypInt -> true
               | _ -> false)
           | _ -> false
       in
@@ -312,7 +309,7 @@ let check_arithmetic op e1 e2 =
     | _ -> check_basic op t1 t2
   in
   let typ =
-    if is_untyped e1 && is_untyped e2 then check_untyped op e1.typ e2.typ
+    if is_untyped e1 || is_untyped e2 then check_untyped op e1.typ e2.typ
     else check_basic op e1.typ e2.typ
   in
   let value, mode =
@@ -388,7 +385,7 @@ let check_comparison op e1 e2 =
     | _ -> check_basic op t1 t2
   in
   let typ =
-    if is_untyped e1 && is_untyped e2 then check_untyped op e1.typ e2.typ
+    if is_untyped e1 || is_untyped e2 then check_untyped op e1.typ e2.typ
     else check_basic op e1.typ e2.typ
   in
   let value, mode =
@@ -776,7 +773,7 @@ let rec check_statement env vdecl = function
         List.fold_left
           (fun acc e ->
             let e' = check_expression env e in
-            e' :: acc)
+            acc @ [e'])
           []
           args
       in
@@ -786,7 +783,7 @@ and check_statement_list (env : Env.t) vdecl sl =
   List.fold_left
     (fun (stl, vdecl1) st ->
       let st', vdecl1' = check_statement env vdecl1 st in
-      (st' :: stl, vdecl1'))
+      (stl @ [st'], vdecl1'))
     ([], vdecl)
     sl
 
@@ -859,7 +856,7 @@ let check_program (program : Ast_loc.program) =
   in
   let get_func_typ (func : Ast_loc.func) =
     TypFunc
-      ( List.fold_left (fun acc param -> snd param :: acc) [] func.params,
+      ( List.fold_left (fun acc param -> acc @ [snd param]) [] func.params,
         func.result )
   in
   let (env : Env.t) = Hashtbl.create @@ (4 + List.length program.defs) in
@@ -870,10 +867,10 @@ let check_program (program : Ast_loc.program) =
         n
         { typ = t; mode = ModBuiltin; value = None; used = false })
     [
-      ("len", TypFunc ([ basic TypString ], Some TypInt));
-      ("real", TypFunc ([ basic TypComplex ], Some TypFloat));
-      ("imag", TypFunc ([ basic TypComplex ], Some TypFloat));
-      ("complex", TypFunc ([ basic TypFloat; basic TypFloat ], Some TypFloat));
+      ("len", TypFunc ([basic TypString], Some TypInt));
+      ("real", TypFunc ([basic TypComplex], Some TypFloat));
+      ("imag", TypFunc ([basic TypComplex], Some TypFloat));
+      ("complex", TypFunc ([basic TypFloat; basic TypFloat], Some TypComplex));
     ];
   let try_add_func env (func : Ast_loc.func) =
     let add_func env (func : Ast_loc.func) =
