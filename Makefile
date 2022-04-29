@@ -1,6 +1,6 @@
 all:
 	mkdir -p target/c && mkdir -p target/exe
-	dune build && dune build @fmt --auto-promote
+	dune build
 	ln -sf _build/default/bin/main.exe mini-go
 	cd tgc && $(MAKE)
 
