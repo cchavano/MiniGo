@@ -1,6 +1,7 @@
 open Parser
 open Printf
 
+(** [token_to_string token] returns a string representation of the token [token]. *)
 let token_to_string = function
   | PACKAGE -> "PACKAGE"
   | IMPORT -> "IMPORT"
@@ -44,6 +45,7 @@ let token_to_string = function
   | IDENT id -> sprintf "IDENT '%s'" id.content
   | EOF -> "EOF"
 
+(** [print lexbuf] prints the tokens obtained from the lexical analysis of [lexbuf] on the standard output. *)
 let print lexbuf =
   let rec get_tokens acc lexbuf =
     let token = Lexer.read_token lexbuf in

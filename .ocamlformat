@@ -9,3 +9,4 @@ wrap-fun-args = false
 exp-grouping = preserve
 space-around-lists = false
 margin = 90
+doc-comments = before

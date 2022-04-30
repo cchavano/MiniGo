@@ -1,11 +1,13 @@
 open Lexing
 
+(** [from_single_pos pos] returns a string representation of an error located at the position [pos]. *)
 let from_single_pos pos =
   let file = pos.pos_fname in
   let l = pos.pos_lnum in
   let c = pos.pos_cnum - pos.pos_bol + 1 in
   Printf.sprintf "%s:%d:%d:" file l c
 
+(** [from_single_pos pos] returns a string representation of an error located between positions [pos1] and [pos2]. *)
 let from_interval pos1 pos2 =
   if pos1.pos_cnum = pos2.pos_cnum - 1 then from_single_pos pos1
   else

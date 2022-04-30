@@ -31,36 +31,43 @@ exception Invalid_cond
 
 exception Unassignable_operand
 
-let option_to_string empty f = function
-  | None -> empty
-  | Some e -> f e
+(** [option_to_string snone fsome o] returns a string given by [fsome] applied to [v] if [o] is [Some v], else returns [snone]. *)
+let option_to_string snone fsome = function
+  | None -> snone
+  | Some v -> fsome v
 
+(** [unop_to_string op] returns a string representation of the unary operator [op]. *)
 let unop_to_string = function
   | UOpNot -> "!"
   | UOpPlus -> "+"
   | UOpMinus -> "-"
 
+(** [arthop_to_string op] returns a string representation of the arithmetic operator [op]. *)
 let arthop_to_string = function
   | OpAdd -> "+"
   | OpSub -> "-"
   | OpMul -> "*"
   | OpDiv -> "/"
 
+(** [comparop_to_string op] returns a string representation of the comparison operator [op]. *)
 let comparop_to_string = function
   | OpLesst -> "<"
   | OpGreat -> ">"
   | OpEqual -> "=="
   | OpNotEqual -> "!="
 
+(** [logicop_to_string op] returns a string representation of the logical operator [op]. *)
 let logicop_to_string = function
   | OpAnd -> "&&"
   | OpOr -> "||"
 
+(** [binop_to_string op] returns a string representation of the binary operator [op]. *)
 let binop_to_string = function
   | OpArithmetic op -> arthop_to_string op
   | OpCompare op -> comparop_to_string op
   | OpLogic op -> logicop_to_string op
 
+(** [literal_to_string lit] returns a string representation of the literal [lit]. *)
 let literal_to_string = function
   | LitInt i -> Int64.to_string i
   | LitFloat f -> Float.to_string f
@@ -68,6 +75,7 @@ let literal_to_string = function
   | LitBool b -> Bool.to_string b
   | LitString s -> s
 
+(** [value_to_string v] returns the value contained in the [Ast_typ.expression_value] [v]. *)
 let value_to_string = function
   | ValInt i -> Int64.to_string i
   | ValFloat f -> Float.to_string f
@@ -75,6 +83,7 @@ let value_to_string = function
   | ValBool b -> Bool.to_string b
   | ValString s -> s
 
+(** [basic_typ_to_string typ] returns a string representation of the basic type [typ]. *)
 let basic_typ_to_string = function
   | TypInt -> "int"
   | TypFloat -> "float64"
@@ -82,6 +91,7 @@ let basic_typ_to_string = function
   | TypBool -> "bool"
   | TypString -> "string"
 
+(** [typ_to_string typ] returns a string representation of the type [typ]. *)
 let rec typ_to_string = function
   | TypBasic b -> basic_typ_to_string b
   | TypFunc (l, t) ->
@@ -90,13 +100,16 @@ let rec typ_to_string = function
         (typ_list_to_string l)
         (option_to_string "" basic_typ_to_string t)
 
+(** [typ_list_to_string l] returns a string representation of the type list [l]. *)
 and typ_list_to_string = function
   | [] -> ""
   | [x] -> sprintf "%s" (typ_to_string x)
   | x :: r -> sprintf "%s %s" (typ_to_string x) (typ_list_to_string r)
 
+(** [expression_to_string prefix e] returns a string representation of the expression [e]. *)
 let rec expression_to_string e = raw_expression_to_string e.raw
 
+(** [raw_expression_to_string e] returns a string representation of the raw expression [e]. *)
 and raw_expression_to_string = function
   | ELiteral lit -> literal_to_string lit
   | EIdentRef id -> id
@@ -110,12 +123,14 @@ and raw_expression_to_string = function
         (binop_to_string op)
         (expression_to_string e2)
 
+(** [expression_list_to_string l] returns a string representation of the expression list [l]. *)
 and expression_list_to_string l =
   match l with
   | [] -> ""
   | [x] -> expression_to_string x
   | x :: r -> sprintf "%s, %s" (expression_to_string x) (expression_list_to_string r)
 
+(** [expression_info_to_string e] returns a tiny description (as a string) of the expression [e]. *)
 let expression_info_to_string e =
   let typ_as_string = typ_to_string e.typ in
   let value_or_empty e =
@@ -130,19 +145,28 @@ let expression_info_to_string e =
   | ModValue -> sprintf "value of type %s" typ_as_string
   | _ -> assert false
 
+(** [error loc msg] raises an exception [Error] with the message [msg] and the position information contained in [loc]. *)
 let error loc msg =
   raise
   @@ Error (sprintf "%s %s" (Pretty_error.from_interval loc.startpos loc.endpos) msg)
 
+(** [lookup id env] returns the current binding of [id] in [env], or raises
+    an exception [Error] if no such binding exists. *)
 let lookup id env = try Env.lookup id env with Env.Undeclared_name msg -> error id msg
 
+(** [set_used id env] updates the [used] field of the record binded to [id] in [env], or raises
+    an exception [Error] if no such binding exists. *)
 let set_used id env =
   try Env.set_used id env with Env.Undeclared_name msg -> error id msg
 
+(** [mkte raw typ mode value] builds a new [Ast_typ] expression with raw expression [raw],
+    type [typ], mode [mode] and value [value]. *)
 let mkte raw typ mode value = { raw; typ; mode; value }
 
+(** [basic t] returns a [TypBasic] type from the basic type [t]. *)
 let basic t = TypBasic t
 
+(** [typeof_literal lit] returns the type of the literal [lit]. *)
 let typeof_literal lit =
   let basic_t =
     match lit with
@@ -154,6 +178,7 @@ let typeof_literal lit =
   in
   TypBasic basic_t
 
+(** [valueof_literal lit] returns the value of the literal [lit]. *)
 let valueof_literal = function
   | LitInt i -> ValInt i
   | LitFloat f -> ValFloat f
@@ -161,10 +186,14 @@ let valueof_literal = function
   | LitBool b -> ValBool b
   | LitString s -> ValString s
 
+(** [is_untyped e] checks if the expression [e] is an untyped constant. *)
 let is_untyped e = e.mode = ModUntyped
 
+(** [is_const e] checks if the expression [e] is a constant. *)
 let is_const e = e.mode = ModConstant || e.mode = ModUntyped
 
+(** [representation value typ] returns the representation of [value] by [typ] if [value] is representable by
+    a value of type [typ], else returns [None]. *)
 let representation value typ =
   match (value, typ) with
   | (ValInt _ as vi), TypInt -> Some vi
@@ -183,17 +212,23 @@ let representation value typ =
   | ValComplex c, TypFloat -> if c.im = 0. then Some (ValFloat c.re) else None
   | _ -> None
 
+(** [const_basic_typ typ] returns [basic_t] if [typ] is [TypBasic basic_t], else [assert false]. *)
 let const_basic_typ = function
   | TypBasic basic_t -> basic_t
   | TypFunc _ -> assert false
 
+(** [is_representable typ e] checks if the constant expression [e] has
+    a value that can be represented by a value of type [typ]. *)
 let is_representable typ e =
   representation (Option.get e.value) (const_basic_typ typ) <> None
 
+(** [check_assignability typ e] checks if the expression [e] is assignable to a variable of type [typ]. *)
 let check_assignability typ e =
   if e.typ = typ || (is_untyped e && is_representable typ e) then ()
   else raise Incompatible_assign
 
+(** [check_conversion typ e] returns an [Ast_typ.EConversion] expression if the type of [e] can
+    be converted into [typ], else raises [Invalid_conversion]. *)
 let check_conversion typ e =
   let value, mode =
     if is_const e then
@@ -219,6 +254,8 @@ let check_conversion typ e =
   in
   mkte (EConversion (typ, e)) typ mode value
 
+(** [check_unary_op op e] returns an [Ast_typ.EUnOp] expression if the unary operation
+    between the operator [op] and the expression [e] is valid. *)
 let check_unary_op op e =
   let typ =
     match e.typ with
@@ -244,6 +281,10 @@ let check_unary_op op e =
   in
   mkte (EUnOp (op, e)) typ e.mode value
 
+(** [eval_arithmetic op v1 v2] returns an [Ast_typ.expression_value] that contains the
+    result of the arithmetic operation [op] between values [v1] and [v2].
+    Raises [Undefine_op] if the operator [op] is not defined for both of the operands. 
+    Raises [Mismatched_types] if [v1] and [v2] are not valid operands for [op]. *)
 let eval_arithmetic op v1 v2 =
   let eval_test v1 v2 fint64 ffloat fcomplex =
     match (v1, v2) with
@@ -274,6 +315,8 @@ let eval_arithmetic op v1 v2 =
   | OpMul -> eval_test v1 v2 Int64.mul Float.mul Complex.mul
   | OpDiv -> eval_test v1 v2 Int64.div Float.div Complex.div
 
+(** [check_arithmetic op e1 e2] returns an [Ast_typ.EBinOp] arithmetic expression if [e1] and [e2]
+    are valid operands for the operator [op], else raises [Mismatched_types]. *)
 let check_arithmetic op e1 e2 =
   let check_basic op t1 t2 =
     match (t1, t2) with
@@ -313,6 +356,9 @@ let check_arithmetic op e1 e2 =
   in
   mkte (EBinOp (OpArithmetic op, e1, e2)) typ mode value
 
+(** [eval_comparison op v1 v2] returns a [Ast_typ.expression_value] that contains the
+    result of the comparison operation [op] between values [v1] and [v2].
+    Raises [Mismatched_types] if [v1] and [v2] can't be compared with [op]. *)
 let eval_comparison op v1 v2 =
   let eval_eq v1 v2 =
     match (v1, v2) with
@@ -351,6 +397,8 @@ let eval_comparison op v1 v2 =
   | OpLesst -> eval_lt v1 v2
   | OpGreat -> eval_gt v1 v2
 
+(** [check_comparison op e1 e2] returns an [Ast_typ.EBinOp] comparison expression if [e1] and [e2]
+    are valid operands for the operator [op], elses raises [Mismatched_types]. *)
 let check_comparison op e1 e2 =
   let check_basic op t1 t2 =
     match (t1, t2) with
@@ -385,6 +433,9 @@ let check_comparison op e1 e2 =
   in
   mkte (EBinOp (OpCompare op, e1, e2)) typ mode value
 
+(** [eval_logic op v1 v2] returns a [Ast_typ.expression_value] that contains the
+    result of the logical operation [op] between values [v1] and [v2].
+    Raises [Mismatched_types] if [v1] and [v2] are not valid operands for [op]. *)
 let eval_logic op v1 v2 =
   let eval_test v1 v2 f =
     match (v1, v2) with
@@ -395,6 +446,8 @@ let eval_logic op v1 v2 =
   | OpAnd -> eval_test v1 v2 ( && )
   | OpOr -> eval_test v1 v2 ( || )
 
+(** [check_logic op e1 e2] returns an [Ast_typ.EBinOp] logical expression if [e1] and [e2]
+    are valid operands for the operator [op], else raises [Mismatched_types]. *)
 let check_logic op e1 e2 =
   let typ =
     match (e1.typ, e2.typ) with
@@ -417,6 +470,8 @@ let check_logic op e1 e2 =
   in
   mkte (EBinOp (OpLogic op, e1, e2)) typ mode value
 
+(** [valueof_builtin_len e] returns an [Ast_typ.expression_value] that contains the result of
+    the Go "len" builtin function applied to the expression [e]. *)
 let valueof_builtin_len e =
   let value = representation (Option.get e.value) TypString in
   match value with
@@ -427,6 +482,8 @@ let valueof_builtin_len e =
     end
   | None -> assert false
 
+(** [valueof_builtin_complex e2 e2] returns an [Ast_typ.expression_value] that contains the result of
+    the Go "complex" builtin function applied to the expressions [e1] and [e2]. *)
 let valueof_builtin_complex e1 e2 =
   let value1 = representation (Option.get e1.value) TypFloat in
   let value2 = representation (Option.get e2.value) TypFloat in
@@ -438,6 +495,8 @@ let valueof_builtin_complex e1 e2 =
     end
   | _ -> assert false
 
+(** [valueof_builtin_real e] returns an [Ast_typ.expression_value] that contains the result of
+    the Go "real" builtin function applied to the expression [e]. *)
 let valueof_builtin_real e =
   let value = representation (Option.get e.value) TypComplex in
   match value with
@@ -448,6 +507,8 @@ let valueof_builtin_real e =
     end
   | None -> assert false
 
+(** [valueof_builtin_imag e] returns an [Ast_typ.expression_value] that contains the result of
+    the Go "imag" builtin function applied to the expression [e]. *)
 let valueof_builtin_imag e =
   let value = representation (Option.get e.value) TypComplex in
   match value with
@@ -458,6 +519,8 @@ let valueof_builtin_imag e =
     end
   | None -> assert false
 
+(** [valueof_builtin name args] returns an [Ast_typ.expression_value] that contains the result of
+    the Go builtin function named [name] applied to the arguments [args]. *)
 let valueof_builtin name args =
   match name with
   | "len" -> valueof_builtin_len (List.nth args 0)
@@ -466,6 +529,11 @@ let valueof_builtin name args =
   | "complex" -> valueof_builtin_complex (List.nth args 0) (List.nth args 1)
   | _ -> assert false
 
+(** [check_func_call id args env] returns an [Ast_typ.EFuncCall] expression if the call of the
+    function [id] with the arguments [args] is valid when made in the environment [env].
+    Raises [Too_many_values] if the function has no return type.
+    Raises [Invalid_call] if [id] does not refer to a function (directly of via a variable).
+    Raises [Error] with the appropriate message if the arguments [args] don't match the function signature. *)
 let rec check_func_call id args env =
   let record = lookup id env in
   match record.typ with
@@ -544,6 +612,8 @@ let rec check_func_call id args env =
       mkte (Ast_typ.EFuncCall (id.content, args')) typ mode value
   | _ -> raise Invalid_call
 
+(** [check_expression env e] returns a typed expression if the [Ast_loc] expression [e] is valid
+    given the environment [env]. *)
 and check_expression env e =
   match e.content with
   | Ast_loc.ELiteral lit ->
@@ -617,6 +687,8 @@ and check_expression env e =
              (typ_as_string e1')
              (typ_as_string e2')))
 
+(** [check_var_decl id typ e] returns a [Ast_typ.statement] variable declaration if the declared variable [id]
+    of type [typ] can be initialized with the expression [e]. *)
 let check_var_decl id typ e =
   let name = id.content in
   match typ with
@@ -631,6 +703,8 @@ let check_var_decl id typ e =
       | None -> failwith "the generated AST doest not respect the language grammar"
       | Some e' -> (StVarDecl (name, e'.typ, e), e'.typ))
 
+(** [check_const_decl id typ e] returns a [Ast_typ.statement] constant declaration if the declared constant [id]
+    of type [typ] can be initialized with the expression [e]. *)
 let check_const_decl id typ e =
   if not (is_const e) then raise Invalid_const_init
   else
@@ -641,13 +715,18 @@ let check_const_decl id typ e =
         (StConstDecl (name, t, e), t, ModConstant, e.value)
     | None -> (StConstDecl (name, e.typ, e), e.typ, ModUntyped, e.value)
 
+(** [add_decl id vdecl] adds the variable / constant [id] in the map of declared variables / constants [vdecl]
+    and then returns the updated map. Raises [Error] if the identifier [id] is already mapped. *)
 let add_decl id vdecl =
   if not (StringMap.mem id.content vdecl) then
     StringMap.add id.content (id.startpos, id.endpos) vdecl
   else error id (sprintf "%s redeclared in this block" id.content)
 
+(** [check_cond e] checks if the type of the condition [e] is boolean. *)
 let check_cond e = if e.typ <> TypBasic TypBool then raise Invalid_cond else ()
 
+(** [check_statement env vdecl s] returns a typed statement if the [Ast_loc] statement [s] is valid given the environment [env] and
+    the map of variables and constants [vdecl] declared in the current block. *)
 let rec check_statement env vdecl = function
   | Ast_loc.StVarDecl (id, typ, e) -> begin
       let e' =
@@ -759,6 +838,8 @@ let rec check_statement env vdecl = function
       in
       (StPrintln args', vdecl)
 
+(** [check_statement_list  env vdecl sl] returns a typed statement list if the list of [Ast_loc] statements [sl] is valid
+    given the environment [env] and the map of variables and constants [vdecl] declared in the current block. *)
 and check_statement_list (env : Env.t) vdecl sl =
   List.fold_left
     (fun (stl, vdecl1) st ->
@@ -767,6 +848,7 @@ and check_statement_list (env : Env.t) vdecl sl =
     ([], vdecl)
     sl
 
+(** [check_used_var env vdecl] checks if all declared variables in [vdecl] have been used given the environment [env]. *)
 and check_used_var env vdecl =
   StringMap.iter
     (fun name pos ->
@@ -778,6 +860,8 @@ and check_used_var env vdecl =
       else ())
     vdecl
 
+(** [check_func env func] returns an [Ast_typ] function if the [Ast_loc] function definition [func]
+    is valid within the environment [env].*)
 let check_func env (func : Ast_loc.func) =
   let params = List.map (fun (id, typ) -> (id.content, typ)) func.params in
   List.map
@@ -820,6 +904,7 @@ let check_func env (func : Ast_loc.func) =
   check_used_var env vdecl;
   { name = func.name.content; params; body; result = func.result; return }
 
+(** [check_program program] returns an [Ast_typ] program if the [Ast_loc] program is semantically correct. *)
 let check_program (program : Ast_loc.program) =
   if program.package.content <> "main" then
     error program.package "package command-line-arguments is not a main package";

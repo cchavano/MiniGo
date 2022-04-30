@@ -5,41 +5,49 @@ let indent = String.make 4 ' '
 
 module StringSet = Set.Make (String)
 
-let option_to_string empty f = function
-  | None -> empty
-  | Some e -> f e
+(** [option_to_string snone fsome o] returns a string given by [fsome] applied to [v] if [o] is [Some v], else returns [snone]. *)
+let option_to_string snone fsome = function
+  | None -> snone
+  | Some v -> fsome v
 
+(** [list_to_string l] returns a string representation of the list [l]. *)
 let rec list_to_string sep f = function
   | [] -> ""
   | [x] -> f x
   | x :: r -> sprintf "%s%s%s" (f x) sep (list_to_string sep f r)
 
+(** [unop_to_string op] transpiles of the unary operator [op] to C. *)
 let unop_2c = function
   | UOpNot -> "!"
   | UOpPlus -> "+"
   | UOpMinus -> "-"
 
+(** [arthop_to_string op] transpiles the arithmetic operator [op] to C. *)
 let arthop_2c = function
   | OpAdd -> "+"
   | OpSub -> "-"
   | OpMul -> "*"
   | OpDiv -> "/"
 
+(** [comparop_2c op] transpiles the comparison operator [op] to C. *)
 let comparop_2c = function
   | OpLesst -> "<"
   | OpGreat -> ">"
   | OpEqual -> "=="
   | OpNotEqual -> "!="
 
+(** [logicop_2c op] transpiles the logical operator [op] to C. *)
 let logicop_2c = function
   | OpAnd -> "&&"
   | OpOr -> "||"
 
+(** [binop_2c op] transpiles the binary operator [op] to C. *)
 let binop_2c = function
   | OpArithmetic op -> arthop_2c op
   | OpCompare op -> comparop_2c op
   | OpLogic op -> logicop_2c op
 
+(** [literal_2c lit] transpiles the literal [lit] to C. *)
 let literal_2c = function
   | LitInt i -> Int64.to_string i
   | LitFloat f -> Float.to_string f
@@ -47,6 +55,7 @@ let literal_2c = function
   | LitBool b -> Bool.to_string b
   | LitString s -> s
 
+(** [value_2c v] transpiles the value [v] to C. *)
 let value_2c = function
   | ValInt i -> Int64.to_string i
   | ValFloat f -> Float.to_string f
@@ -54,6 +63,7 @@ let value_2c = function
   | ValBool b -> Bool.to_string b
   | ValString s -> s
 
+(** [basic_typ_2c typ] transpiles the basic type [typ] to C. *)
 let basic_typ_2c = function
   | TypInt -> "int"
   | TypFloat -> "double"
@@ -61,14 +71,19 @@ let basic_typ_2c = function
   | TypBool -> "bool"
   | TypString -> "string"
 
+(** [typ_2c typ] tanspiles the type [typ] to C. *)
 let rec typ_2c = function
   | TypBasic b -> basic_typ_2c b
   | TypFunc (l, t) -> sprintf "%s (*) (%s)" (typ_option_2c t) (typ_list_2c l)
 
+(** [typ_option_2c typ] transpiles the optional type [typ] to C. *)
 and typ_option_2c typ = option_to_string "void" basic_typ_2c typ
 
-and typ_list_2c tl = list_to_string ", " typ_2c tl
+(** [typ_list_2c l] transpiles the type list [l] to C. *)
+and typ_list_2c l = list_to_string ", " typ_2c l
 
+(** [expression_2c venv fenv e] transpiles the expression [e] to C, given the variables of the current and parent blocks [venv]
+    and the user-defined functions [fenv]. *)
 let rec expression_2c venv fenv e =
   if e.mode = ModUntyped || e.mode = ModConstant then value_2c (Option.get e.value)
   else
@@ -96,6 +111,8 @@ let rec expression_2c venv fenv e =
     | EBinOp (op, e1, e2) -> binop_expression_2c venv fenv op e1 e2
     | EConversion (typ, e) -> sprintf "((%s)%s)" (typ_2c typ) (expression_2c venv fenv e)
 
+(** [binop_expression_2c venv fenv op e1 e2] transpiles the binary operation [op] between expressions [e1] and [e2]
+    to C, given the variables of the current and parent blocks [venv] and the user-defined functions [fenv]. *)
 and binop_expression_2c venv fenv op e1 e2 =
   match (e2.typ, e2.typ) with
   | TypBasic b1, TypBasic b2 -> begin
@@ -114,8 +131,12 @@ and binop_expression_2c venv fenv op e1 e2 =
     end
   | _ -> assert false
 
-and expression_list_2c venv fenv el = list_to_string ", " (expression_2c venv fenv) el
+(** [expression_list_2c venv fenv l] transpiles the expression list [l] to C, given the variables of the current and parent blocks [venv]
+    and the user-defined functions [fenv]. *)
+and expression_list_2c venv fenv l = list_to_string ", " (expression_2c venv fenv) l
 
+(** [statement_2c prefix venv fenv s] transpiles the statement [s] to C, given the variables of the current and parent blocks [venv]
+    and the user-defined functions [fenv], and where [prefix] is the previous level of indentation. *)
 let rec statement_2c prefix venv fenv s =
   let prefix' = prefix ^ indent in
   match s with
@@ -191,6 +212,8 @@ let rec statement_2c prefix venv fenv s =
       let sprint = sprintf "%sprintf(\"%s\\n\", %s);" prefix' fmt args' in
       (sprint, venv)
 
+(** [expression_init_2c venv fenv typ e] transpiles the expression [e], used to initialize a variable of type [typ], to C,
+    given the variables of the current and parent blocks [venv] and the user-defined functions [fenv]. *)
 and expression_init_2c venv fenv typ e =
   match e with
   | None -> begin
@@ -210,7 +233,9 @@ and expression_init_2c venv fenv typ e =
       | TypBasic TypString -> sprintf "string_init(%s)" e'
       | _ -> e')
 
-and statement_list_2c prefix venv fenv sl =
+(** [statement_list_2c prefix venv fenv l] transpiles the statement list [l] to C, given the variables of the current and parent blocks [venv]
+    and the user-defined functions [fenv], and where [prefix] is the previous level of indentation. *)
+and statement_list_2c prefix venv fenv l =
   let get_separator = function
     | StConstDecl _ -> ""
     | _ -> "\n"
@@ -225,8 +250,9 @@ and statement_list_2c prefix venv fenv sl =
         let stl' = sprintf "%s%s%s" stl x' (get_separator x) in
         get_statements (stl', venv') fenv r
   in
-  get_statements ("", venv) fenv sl
+  get_statements ("", venv) fenv l
 
+(** [func_2c fenv func] transpiles the function definition [func] to C given the user-defined functions [fenv]. *)
 let func_2c fenv func =
   let func_param_2c param =
     match snd param with
@@ -247,6 +273,7 @@ let func_2c fenv func =
     indent
     (option_to_string "" (expression_2c venv' fenv) func.return)
 
+(** [func_2c fenv func] transpiles the main function definition [func] to C given the user-defined functions [fenv]. *)
 let main_2c fenv func =
   sprintf
     "int main(int argc, char **argv) {\n\
@@ -260,6 +287,7 @@ let main_2c fenv func =
     indent
     indent
 
+(** C function that returns the string representation of a boolean. *)
 let cfunc_bool_to_string =
   sprintf
     "__attribute__((noinline)) static char* bool_to_string(bool b) {\n\
@@ -273,6 +301,7 @@ let cfunc_bool_to_string =
     indent
     indent
 
+(** C function that returns the string representation of a complex number. *)
 let cfunc_complex_to_string =
   sprintf
     "__attribute__((noinline)) static char* complex_to_string(double complex c) {\n\
@@ -284,6 +313,7 @@ let cfunc_complex_to_string =
     indent
     indent
 
+(** C function that initializes a string into the head and returns it. *)
 let cfunc_string_init =
   sprintf
     "__attribute__((noinline)) static char* string_init(const char *s) {\n\
@@ -295,6 +325,8 @@ let cfunc_string_init =
     indent
     indent
 
+(** C function that assigns a string into a variable of type string that were
+    already allocated in the heap. *)
 let cfunc_string_assign =
   sprintf
     "__attribute__((noinline)) static void string_assign(char *dest, const char *src) {\n\
@@ -304,6 +336,7 @@ let cfunc_string_assign =
     indent
     indent
 
+(** C function that concatenates two strings, allocates the result in the heap and returns it. *)
 let cfunc_string_concat =
   sprintf
     "__attribute__((noinline)) static char* string_concat(const char *s1, const char \
@@ -320,6 +353,7 @@ let cfunc_string_concat =
     indent
     indent
 
+(** C function that is equivalent to the "complex" Go builtin function. *)
 let cfunc_complex_of =
   sprintf
     "static inline double complex complex_of(double re, double im) {\n\
@@ -327,6 +361,7 @@ let cfunc_complex_of =
      }\n"
     indent
 
+(** [program_2c out program] transpiles the Go program [program] to C and output the result on [out]. *)
 let program_2c out program =
   let defs_wo_main = List.filter (fun f -> f.name <> "main") program.defs in
   let def_main = List.find (fun f -> f.name = "main") program.defs in

@@ -19,9 +19,7 @@
 
   let prev_token = ref (Option.none)
 
-  let tok token =
-    prev_token := Option.some token;
-    token
+  let tok token = prev_token := Option.some token; token
 }
 
 let digit = ['0'-'9']
