@@ -72,13 +72,11 @@ let list_to_string f prefix l =
   let rec lts = function
     | [] -> ""
     | [x] -> sprintf "%s%s%s" prefix' branch_end (f (prefix' ^ " ") x)
-    | x :: r ->
-        sprintf "%s%s%s\n%s" prefix' branch (f (prefix' ^ pipe) x) (lts r)
+    | x :: r -> sprintf "%s%s%s\n%s" prefix' branch (f (prefix' ^ pipe) x) (lts r)
   in
   lts l
 
-let rec expression_to_string prefix loc =
-  raw_expression_to_string prefix loc.content
+let rec expression_to_string prefix loc = raw_expression_to_string prefix loc.content
 
 and raw_expression_to_string prefix e =
   let prefix' = prefix ^ indent in
@@ -90,12 +88,7 @@ and raw_expression_to_string prefix e =
         if List.length args = 0 then ""
         else sprintf "\n%s" (expression_list_to_string prefix' args)
       in
-      sprintf
-        "EFuncCall '%s'\n%s%s()%s"
-        id.content
-        prefix'
-        branch_end
-        args_as_string
+      sprintf "EFuncCall '%s'\n%s%s()%s" id.content prefix' branch_end args_as_string
   | EConversion (t, e) ->
       sprintf
         "EConversion %s\n%s%s%s"
@@ -121,8 +114,7 @@ and raw_expression_to_string prefix e =
         branch_end
         (expression_to_string prefix' e2)
 
-and expression_list_to_string prefix l =
-  list_to_string expression_to_string prefix l
+and expression_list_to_string prefix l = list_to_string expression_to_string prefix l
 
 let rec statement_to_string prefix s =
   let prefix' = prefix ^ indent in
@@ -131,18 +123,9 @@ let rec statement_to_string prefix s =
       let expr =
         match e with
         | None -> ""
-        | Some v ->
-            sprintf
-              "\n%s%s%s"
-              prefix'
-              branch_end
-              (expression_to_string prefix' v)
+        | Some v -> sprintf "\n%s%s%s" prefix' branch_end (expression_to_string prefix' v)
       in
-      sprintf
-        "StVarDecl '%s' %s%s"
-        id.content
-        (option_to_string "" typ_to_string t)
-        expr
+      sprintf "StVarDecl '%s' %s%s" id.content (option_to_string "" typ_to_string t) expr
   | StConstDecl (id, t, e) ->
       sprintf
         "StConstDecl '%s' %s\n%s%s%s"
@@ -189,8 +172,7 @@ let rec statement_to_string prefix s =
         branch_end
         (expression_list_to_string prefix' args)
 
-and statement_list_to_string prefix l =
-  list_to_string statement_to_string prefix l
+and statement_list_to_string prefix l = list_to_string statement_to_string prefix l
 
 let rec func_list_to_string prefix l = list_to_string func_to_string prefix l
 
@@ -233,4 +215,4 @@ and func_to_string prefix func =
     branch_end
     returned_expr
 
-let print_ast prog = printf "program\n%s\n" @@ func_list_to_string "" prog.defs
+let print prog = printf "program\n%s\n" @@ func_list_to_string "" prog.defs

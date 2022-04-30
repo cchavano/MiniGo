@@ -1,1 +1,1 @@
-val print_ast : Ast_loc.program -> unit
+val print : Ast_loc.program -> unit

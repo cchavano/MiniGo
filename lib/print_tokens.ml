@@ -44,7 +44,7 @@ let token_to_string = function
   | IDENT id -> sprintf "IDENT '%s'" id.content
   | EOF -> "EOF"
 
-let print_tokens lexbuf =
+let print lexbuf =
   let rec get_tokens acc lexbuf =
     let token = Lexer.read_token lexbuf in
     match token with

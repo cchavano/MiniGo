@@ -70,8 +70,7 @@ and typ_option_2c typ = option_to_string "void" basic_typ_2c typ
 and typ_list_2c tl = list_to_string ", " typ_2c tl
 
 let rec expression_2c venv fenv e =
-  if e.mode = ModUntyped || e.mode = ModConstant then
-    value_2c (Option.get e.value)
+  if e.mode = ModUntyped || e.mode = ModConstant then value_2c (Option.get e.value)
   else
     match e.raw with
     | ELiteral lit -> literal_2c lit
@@ -81,8 +80,7 @@ let rec expression_2c venv fenv e =
     | EFuncCall (id, args) ->
         let sid =
           if StringSet.mem id venv then "_" ^ id
-          else if StringSet.mem id fenv then
-            if id = "main" then id else "def_" ^ id
+          else if StringSet.mem id fenv then if id = "main" then id else "def_" ^ id
           else
             sprintf
               "%s"
@@ -96,8 +94,7 @@ let rec expression_2c venv fenv e =
         sprintf "%s(%s)" sid (expression_list_2c venv fenv args)
     | EUnOp (uop, e) -> sprintf "%s%s" (unop_2c uop) (expression_2c venv fenv e)
     | EBinOp (op, e1, e2) -> binop_expression_2c venv fenv op e1 e2
-    | EConversion (typ, e) ->
-        sprintf "((%s)%s)" (typ_2c typ) (expression_2c venv fenv e)
+    | EConversion (typ, e) -> sprintf "((%s)%s)" (typ_2c typ) (expression_2c venv fenv e)
 
 and binop_expression_2c venv fenv op e1 e2 =
   match (e2.typ, e2.typ) with
@@ -117,8 +114,7 @@ and binop_expression_2c venv fenv op e1 e2 =
     end
   | _ -> assert false
 
-and expression_list_2c venv fenv el =
-  list_to_string ", " (expression_2c venv fenv) el
+and expression_list_2c venv fenv el = list_to_string ", " (expression_2c venv fenv) el
 
 let rec statement_2c prefix venv fenv s =
   let prefix' = prefix ^ indent in
@@ -128,12 +124,7 @@ let rec statement_2c prefix venv fenv s =
         match typ with
         | TypBasic b1 -> sprintf "%s _%s" (basic_typ_2c b1) id
         | TypFunc (l, t) ->
-            sprintf
-              "%s%s (*_%s) (%s)"
-              prefix
-              (typ_option_2c t)
-              id
-              (typ_list_2c l)
+            sprintf "%s%s (*_%s) (%s)" prefix (typ_option_2c t) id (typ_list_2c l)
       in
       let sinit = expression_init_2c venv fenv typ e in
       (sprintf "%s%s = %s;" prefix' sdecl sinit, StringSet.add id venv)
@@ -142,19 +133,12 @@ let rec statement_2c prefix venv fenv s =
       let s1', _ = statement_2c prefix' venv fenv s1 in
       let s2', _ = statement_2c prefix' venv fenv s2 in
       let sif =
-        sprintf
-          "%sif (%s) %s else %s"
-          prefix'
-          (expression_2c venv fenv e)
-          s1'
-          s2'
+        sprintf "%sif (%s) %s else %s" prefix' (expression_2c venv fenv e) s1' s2'
       in
       (sif, venv)
   | StWhileFor (e, s) ->
       let s', _ = statement_2c prefix' venv fenv s in
-      let swhile =
-        sprintf "%swhile (%s) %s" prefix' (expression_2c venv fenv e) s'
-      in
+      let swhile = sprintf "%swhile (%s) %s" prefix' (expression_2c venv fenv e) s' in
       (swhile, venv)
   | StAssign (id, e) ->
       let sassign =
@@ -291,8 +275,7 @@ let cfunc_bool_to_string =
 
 let cfunc_complex_to_string =
   sprintf
-    "__attribute__((noinline)) static char* complex_to_string(double complex \
-     c) {\n\
+    "__attribute__((noinline)) static char* complex_to_string(double complex c) {\n\
      %schar* res = tgc_alloc(&gc, 100);\n\
      %ssprintf(res, \"(%%.17g+%%.17gi)\", creal(c), cimag(c));\n\
      %sreturn res;\n\
@@ -314,8 +297,7 @@ let cfunc_string_init =
 
 let cfunc_string_assign =
   sprintf
-    "__attribute__((noinline)) static void string_assign(char *dest, const \
-     char *src) {\n\
+    "__attribute__((noinline)) static void string_assign(char *dest, const char *src) {\n\
      %stgc_realloc(&gc, (void *)dest, strlen(src) + 1);\n\
      %sstrcpy(dest, src);\n\
      }\n"
@@ -324,8 +306,8 @@ let cfunc_string_assign =
 
 let cfunc_string_concat =
   sprintf
-    "__attribute__((noinline)) static char* string_concat(const char *s1, \
-     const char *s2) {\n\
+    "__attribute__((noinline)) static char* string_concat(const char *s1, const char \
+     *s2) {\n\
      %ssize_t len1 = strlen(s1);\n\
      %schar *res = tgc_alloc(&gc, len1 + strlen(s2) + 1);\n\
      %sstrcpy(res, s1);\n\
@@ -348,9 +330,7 @@ let cfunc_complex_of =
 let program_2c out program =
   let defs_wo_main = List.filter (fun f -> f.name <> "main") program.defs in
   let def_main = List.find (fun f -> f.name = "main") program.defs in
-  let fenv =
-    List.map (fun f -> f.name) defs_wo_main |> List.to_seq |> StringSet.of_seq
-  in
+  let fenv = List.map (fun f -> f.name) defs_wo_main |> List.to_seq |> StringSet.of_seq in
   fprintf
     out
     "#include <stdlib.h>\n\

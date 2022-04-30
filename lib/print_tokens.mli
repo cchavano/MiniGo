@@ -1,1 +1,1 @@
-val print_tokens : Lexing.lexbuf -> unit
+val print : Lexing.lexbuf -> unit

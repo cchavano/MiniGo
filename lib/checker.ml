@@ -101,10 +101,8 @@ and raw_expression_to_string = function
   | ELiteral lit -> literal_to_string lit
   | EIdentRef id -> id
   | EFuncCall (id, args) -> sprintf "%s(%s)" id (expression_list_to_string args)
-  | EConversion (typ, e) ->
-      sprintf "%s(%s)" (typ_to_string typ) (expression_to_string e)
-  | EUnOp (uop, e) ->
-      sprintf "%s%s" (unop_to_string uop) (expression_to_string e)
+  | EConversion (typ, e) -> sprintf "%s(%s)" (typ_to_string typ) (expression_to_string e)
+  | EUnOp (uop, e) -> sprintf "%s%s" (unop_to_string uop) (expression_to_string e)
   | EBinOp (op, e1, e2) ->
       sprintf
         "%s %s %s"
@@ -116,8 +114,7 @@ and expression_list_to_string l =
   match l with
   | [] -> ""
   | [x] -> expression_to_string x
-  | x :: r ->
-      sprintf "%s, %s" (expression_to_string x) (expression_list_to_string r)
+  | x :: r -> sprintf "%s, %s" (expression_to_string x) (expression_list_to_string r)
 
 let expression_info_to_string e =
   let typ_as_string = typ_to_string e.typ in
@@ -127,24 +124,17 @@ let expression_info_to_string e =
     | _ -> " " ^ value_to_string (Option.get e.value)
   in
   match e.mode with
-  | ModUntyped ->
-      sprintf "untyped %s constant%s" typ_as_string (value_or_empty e)
-  | ModConstant ->
-      sprintf "constant %s of type %s" (value_or_empty e) typ_as_string
+  | ModUntyped -> sprintf "untyped %s constant%s" typ_as_string (value_or_empty e)
+  | ModConstant -> sprintf "constant %s of type %s" (value_or_empty e) typ_as_string
   | ModVariable -> sprintf "variable of type %s" typ_as_string
   | ModValue -> sprintf "value of type %s" typ_as_string
   | _ -> assert false
 
 let error loc msg =
   raise
-  @@ Error
-       (sprintf
-          "%s %s"
-          (Pretty_error.from_interval loc.startpos loc.endpos)
-          msg)
+  @@ Error (sprintf "%s %s" (Pretty_error.from_interval loc.startpos loc.endpos) msg)
 
-let lookup id env =
-  try Env.lookup id env with Env.Undeclared_name msg -> error id msg
+let lookup id env = try Env.lookup id env with Env.Undeclared_name msg -> error id msg
 
 let set_used id env =
   try Env.set_used id env with Env.Undeclared_name msg -> error id msg
@@ -188,8 +178,7 @@ let representation value typ =
   | ValFloat f, TypInt ->
       if Float.is_integer f then Some (ValInt (Int64.of_float f)) else None
   | ValComplex c, TypInt ->
-      if c.im = 0. && Float.is_integer c.re then
-        Some (ValInt (Int64.of_float c.re))
+      if c.im = 0. && Float.is_integer c.re then Some (ValInt (Int64.of_float c.re))
       else None
   | ValComplex c, TypFloat -> if c.im = 0. then Some (ValFloat c.re) else None
   | _ -> None
@@ -507,15 +496,13 @@ let rec check_func_call id args env =
                  id.content)
         | Invalid_argument _ ->
             let prefix =
-              if List.length params_t > List.length args then
-                "not enough arguments"
+              if List.length params_t > List.length args then "not enough arguments"
               else "too many arguments"
             in
             let startpos, endpos =
               let arg_count = List.length args in
               if arg_count > 0 then
-                ( (List.nth args 0).startpos,
-                  (List.nth args (arg_count - 1)).endpos )
+                ((List.nth args 0).startpos, (List.nth args (arg_count - 1)).endpos)
               else
                 ( { id.endpos with pos_cnum = id.endpos.pos_cnum + 1 },
                   { id.endpos with pos_cnum = id.endpos.pos_cnum + 2 } )
@@ -560,11 +547,7 @@ let rec check_func_call id args env =
 and check_expression env e =
   match e.content with
   | Ast_loc.ELiteral lit ->
-      mkte
-        (ELiteral lit)
-        (typeof_literal lit)
-        ModUntyped
-        (Some (valueof_literal lit))
+      mkte (ELiteral lit) (typeof_literal lit) ModUntyped (Some (valueof_literal lit))
   | Ast_loc.EIdentRef id ->
       let record = lookup id env in
       if record.mode = ModBuiltin then
@@ -584,8 +567,7 @@ and check_expression env e =
              (typ_to_string typ)))
   | Ast_loc.EFuncCall (id, args) -> begin
       try check_func_call id args env with
-      | Too_many_values ->
-          error e (sprintf "%s (no value) used as value" id.content)
+      | Too_many_values -> error e (sprintf "%s (no value) used as value" id.content)
       | Invalid_call ->
           let record = lookup id env in
           let expr =
@@ -646,8 +628,7 @@ let check_var_decl id typ e =
           (StVarDecl (name, t, e), t))
   | None -> (
       match e with
-      | None ->
-          failwith "the generated AST doest not respect the language grammar"
+      | None -> failwith "the generated AST doest not respect the language grammar"
       | Some e' -> (StVarDecl (name, e'.typ, e), e'.typ))
 
 let check_const_decl id typ e =
@@ -670,8 +651,7 @@ let check_cond e = if e.typ <> TypBasic TypBool then raise Invalid_cond else ()
 let rec check_statement env vdecl = function
   | Ast_loc.StVarDecl (id, typ, e) -> begin
       let e' =
-        if Option.is_none e then None
-        else Some (check_expression env (Option.get e))
+        if Option.is_none e then None else Some (check_expression env (Option.get e))
       in
       try
         let statement, typ' = check_var_decl id typ e' in
@@ -802,8 +782,7 @@ let check_func env (func : Ast_loc.func) =
   let params = List.map (fun (id, typ) -> (id.content, typ)) func.params in
   List.map
     (fun p ->
-      ( fst p,
-        Env.{ typ = snd p; mode = ModVariable; value = None; used = false } ))
+      (fst p, Env.{ typ = snd p; mode = ModVariable; value = None; used = false }))
     params
   |> List.to_seq |> Hashtbl.add_seq env;
   let check_func_res (func : Ast_loc.func) =
@@ -848,24 +827,18 @@ let check_program (program : Ast_loc.program) =
     match program.import with
     | Some import ->
         if import.content <> "\"fmt\"" then
-          error
-            import
-            (sprintf "cannot resolve package reference %s" import.content)
+          error import (sprintf "cannot resolve package reference %s" import.content)
         else Some import.content
     | None -> None
   in
   let get_func_typ (func : Ast_loc.func) =
     TypFunc
-      ( List.fold_left (fun acc param -> acc @ [snd param]) [] func.params,
-        func.result )
+      (List.fold_left (fun acc param -> acc @ [snd param]) [] func.params, func.result)
   in
   let (env : Env.t) = Hashtbl.create @@ (4 + List.length program.defs) in
   List.iter
     (fun (n, t) ->
-      Hashtbl.add
-        env
-        n
-        { typ = t; mode = ModBuiltin; value = None; used = false })
+      Hashtbl.add env n { typ = t; mode = ModBuiltin; value = None; used = false })
     [
       ("len", TypFunc ([basic TypString], Some TypInt));
       ("real", TypFunc ([basic TypComplex], Some TypFloat));
@@ -877,22 +850,13 @@ let check_program (program : Ast_loc.program) =
       Hashtbl.add
         env
         func.name.content
-        Env.
-          {
-            typ = get_func_typ func;
-            mode = ModValue;
-            value = None;
-            used = false;
-          }
+        Env.{ typ = get_func_typ func; mode = ModValue; value = None; used = false }
     in
     match Hashtbl.find_opt env func.name.content with
     | None -> add_func env func
     | Some f ->
         if f.mode = ModBuiltin then add_func env func
-        else
-          error
-            func.name
-            (sprintf "%s redeclared in this block" func.name.content)
+        else error func.name (sprintf "%s redeclared in this block" func.name.content)
   in
   List.iter (fun f -> try_add_func env f) program.defs;
   if not (Hashtbl.mem env "main") then

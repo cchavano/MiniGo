@@ -1,5 +1,5 @@
 all:
-	mkdir -p target/c && mkdir -p target/exe
+	mkdir -p target/C && mkdir -p target/exe
 	dune build
 	ln -sf _build/default/bin/main.exe mini-go
 	cd tgc && $(MAKE)
