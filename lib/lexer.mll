@@ -104,8 +104,11 @@ rule read_token = parse
       with Not_found ->
         tok @@ IDENT (Location.make (lexeme_start_p lexbuf) (lexeme_end_p lexbuf) id)
     }
-  | "fmt.Println"   { tok PRINTLN }
-  | eof             { tok EOF }
+  | "fmt.Println" as println
+    {
+      tok @@ PRINTLN (Location.make (lexeme_start_p lexbuf) (lexeme_end_p lexbuf) println)
+    }
+  | eof { tok EOF }
   | _ as c
     {
       error (Printf.sprintf "illegal character '%s'" (String.make 1 c))

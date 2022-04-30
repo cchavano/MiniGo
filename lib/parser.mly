@@ -17,7 +17,7 @@
 %token NOT
 %token LPAREN RPAREN LBRACE RBRACE
 %token COMMA SEMICOLON
-%token PRINTLN
+%token <string Location.t> PRINTLN
 %token <int64> INT_LIT
 %token <float> FLOAT_LIT
 %token <float> IMAG_LIT
@@ -92,7 +92,7 @@ statement:
   | IF cond = expression sb1 = statement_block ELSE sb2 = statement_block { StIfElse (cond, sb1, sb2) }
   | FOR cond = expression sb = statement_block { StWhileFor (cond, sb) }
   | id = IDENT ASSIGN e = expression { StAssign (id, e) }
-  | PRINTLN LPAREN args = separated_list(COMMA, expression) RPAREN { StPrintln args }
+  | println = PRINTLN LPAREN args = separated_list(COMMA, expression) RPAREN { StPrintln (Location.make println.Location.startpos println.Location.endpos args) }
   | block = statement_block { block }
 
 statement_block:

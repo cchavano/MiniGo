@@ -2,6 +2,7 @@ open Ast_typ
 open Location
 open Printf
 module StringMap = Map.Make (String)
+module StringSet = Set.Make (String)
 
 module Complex = struct
   include Complex
@@ -726,8 +727,8 @@ let add_decl id vdecl =
 let check_cond e = if e.typ <> TypBasic TypBool then raise Invalid_cond else ()
 
 (** [check_statement env vdecl s] returns a typed statement if the [Ast_loc] statement [s] is valid given the environment [env] and
-    the map of variables and constants [vdecl] declared in the current block. *)
-let rec check_statement env vdecl = function
+    the map of variables and constants [vdecl] declared in the current block, and where [pkgs] is the set of imported packages. *)
+let rec check_statement env vdecl pkgs = function
   | Ast_loc.StVarDecl (id, typ, e) -> begin
       let e' =
         if Option.is_none e then None else Some (check_expression env (Option.get e))
@@ -775,8 +776,8 @@ let rec check_statement env vdecl = function
       let e' = check_expression env e in
       try
         check_cond e';
-        let s1', _ = check_statement env StringMap.empty s1 in
-        let s2', _ = check_statement env StringMap.empty s2 in
+        let s1', _ = check_statement env StringMap.empty pkgs s1 in
+        let s2', _ = check_statement env StringMap.empty pkgs s2 in
         (StIfElse (e', s1', s2'), vdecl)
       with Invalid_cond -> error e "non-boolean condition in if statement"
     end
@@ -784,7 +785,7 @@ let rec check_statement env vdecl = function
       let e' = check_expression env e in
       try
         check_cond e';
-        let s', _ = check_statement env StringMap.empty s in
+        let s', _ = check_statement env StringMap.empty pkgs s in
         (StWhileFor (e', s'), vdecl)
       with Invalid_cond -> error e "non-boolean condition in for statement"
     end
@@ -823,27 +824,29 @@ let rec check_statement env vdecl = function
                (typ_to_string record.typ))
     end
   | Ast_loc.StBlock sl ->
-      let sl', vdecl' = check_statement_list env StringMap.empty sl in
+      let sl', vdecl' = check_statement_list env StringMap.empty pkgs sl in
       check_used_var env vdecl';
       StringMap.iter (fun key _ -> Hashtbl.remove env key) vdecl';
       (StBlock sl', vdecl)
   | Ast_loc.StPrintln args ->
+      if not (StringSet.mem "fmt" pkgs) then error args "missing \"fmt\" package import";
       let args' =
         List.fold_left
           (fun acc e ->
             let e' = check_expression env e in
             acc @ [e'])
           []
-          args
+          args.content
       in
       (StPrintln args', vdecl)
 
 (** [check_statement_list  env vdecl sl] returns a typed statement list if the list of [Ast_loc] statements [sl] is valid
-    given the environment [env] and the map of variables and constants [vdecl] declared in the current block. *)
-and check_statement_list (env : Env.t) vdecl sl =
+    given the environment [env] and the map of variables and constants [vdecl] declared in the current block,
+    and where [pkgs] is the set of imported packages. *)
+and check_statement_list (env : Env.t) vdecl pkgs sl =
   List.fold_left
     (fun (stl, vdecl1) st ->
-      let st', vdecl1' = check_statement env vdecl1 st in
+      let st', vdecl1' = check_statement env vdecl1 pkgs st in
       (stl @ [st'], vdecl1'))
     ([], vdecl)
     sl
@@ -861,8 +864,8 @@ and check_used_var env vdecl =
     vdecl
 
 (** [check_func env func] returns an [Ast_typ] function if the [Ast_loc] function definition [func]
-    is valid within the environment [env].*)
-let check_func env (func : Ast_loc.func) =
+    is valid within the environment [env] and where [pkgs] is the set of imported packages. *)
+let check_func env (func : Ast_loc.func) pkgs =
   let params = List.map (fun (id, typ) -> (id.content, typ)) func.params in
   List.map
     (fun p ->
@@ -899,7 +902,7 @@ let check_func env (func : Ast_loc.func) =
                  (expression_info_to_string return')
                  (basic_typ_to_string t)))
   in
-  let body, vdecl = check_statement_list env StringMap.empty func.body in
+  let body, vdecl = check_statement_list env StringMap.empty pkgs func.body in
   let return = check_func_res func in
   check_used_var env vdecl;
   { name = func.name.content; params; body; result = func.result; return }
@@ -908,12 +911,16 @@ let check_func env (func : Ast_loc.func) =
 let check_program (program : Ast_loc.program) =
   if program.package.content <> "main" then
     error program.package "package command-line-arguments is not a main package";
+  let pkgs = ref StringSet.empty in
   let check_import =
     match program.import with
     | Some import ->
         if import.content <> "\"fmt\"" then
           error import (sprintf "cannot resolve package reference %s" import.content)
-        else Some import.content
+        else begin
+          pkgs := StringSet.add "fmt" !pkgs;
+          Some import.content
+        end
     | None -> None
   in
   let get_func_typ (func : Ast_loc.func) =
@@ -946,5 +953,5 @@ let check_program (program : Ast_loc.program) =
   List.iter (fun f -> try_add_func env f) program.defs;
   if not (Hashtbl.mem env "main") then
     error program.package "function main is undeclared in the main package";
-  let defs = List.map (fun f -> check_func env f) program.defs in
+  let defs = List.map (fun f -> check_func env f !pkgs) program.defs in
   { package = program.package.content; import = check_import; defs }

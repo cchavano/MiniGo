@@ -36,7 +36,7 @@ let token_to_string = function
   | RBRACE -> "RBRACE"
   | COMMA -> "COMMA"
   | SEMICOLON -> "SEMICOLON"
-  | PRINTLN -> "PRINTLN"
+  | PRINTLN _ -> "PRINTLN"
   | INT_LIT i -> sprintf "INT_LIT '%Li'" i
   | FLOAT_LIT f -> sprintf "FLOAT_LIT '%f'" f
   | IMAG_LIT im -> sprintf "IMAG_LIT '%fi'" im

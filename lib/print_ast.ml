@@ -189,7 +189,7 @@ let rec statement_to_string prefix s =
         "StPrintln\n%s%s()\n%s"
         prefix'
         branch_end
-        (expression_list_to_string prefix' args)
+        (expression_list_to_string prefix' args.content)
 
 (** [statement_list_to_string prefix l] returns a string representation of the statement list [l],
     where [prefix] is the string that prefixes [l]. *)

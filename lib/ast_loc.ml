@@ -21,7 +21,7 @@ and statement =
   | StWhileFor of expression * statement
   | StAssign of identifier * expression
   | StBlock of statement list
-  | StPrintln of expression list
+  | StPrintln of expression list Location.t
 
 and expression = raw_expression Location.t
 
