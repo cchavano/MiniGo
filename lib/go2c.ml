@@ -85,7 +85,11 @@ and typ_list_2c l = list_to_string ", " typ_2c l
 (** [expression_2c venv fenv e] transpiles the expression [e] to C, given the variables of the current and parent blocks [venv]
     and the user-defined functions [fenv]. *)
 let rec expression_2c venv fenv e =
-  if e.mode = ModUntyped || e.mode = ModConstant then value_2c (Option.get e.value)
+  if e.mode = ModUntyped || e.mode = ModConstant then
+    let value = Option.get e.value in
+    match e.typ with
+    | TypBasic TypString -> sprintf "string_init(%s)" (value_2c value)
+    | _ -> value_2c value
   else
     match e.raw with
     | ELiteral lit -> literal_2c lit

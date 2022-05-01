@@ -307,7 +307,14 @@ let eval_arithmetic op v1 v2 =
         let c' = Complex.of_float f in
         ValComplex (fcomplex c c')
     | ValString s1, ValString s2 ->
-        if op = OpAdd then ValString (s1 ^ s2) else raise Undefine_op
+        if op = OpAdd then
+          let s1_len, s2_len = (String.length s1, String.length s2) in
+          let s1' =
+            if String.get s1 (s1_len - 1) = '"' then String.sub s1 0 (s1_len - 1) else s1
+          in
+          let s2' = if String.get s2 0 = '"' then String.sub s2 1 (s2_len - 1) else s2 in
+          ValString (s1' ^ s2')
+        else raise Undefine_op
     | _ -> raise Mismatched_types
   in
   match op with

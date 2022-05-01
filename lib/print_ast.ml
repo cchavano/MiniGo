@@ -17,28 +17,28 @@ let option_to_string snone fsome = function
 
 (** [unop_to_string op] returns a string representation of the unary operator [op]. *)
 let unop_to_string = function
-  | UOpNot -> "!"
-  | UOpPlus -> "+"
-  | UOpMinus -> "-"
+  | UOpNot -> "UOpNot"
+  | UOpPlus -> "UOpPlus"
+  | UOpMinus -> "UOpMinus"
 
 (** [arthop_to_string op] returns a string representation of the arithmetic operator [op]. *)
 let arthop_to_string = function
-  | OpAdd -> "+"
-  | OpSub -> "-"
-  | OpMul -> "*"
-  | OpDiv -> "/"
+  | OpAdd -> "OpAdd"
+  | OpSub -> "OpSub"
+  | OpMul -> "OpMul"
+  | OpDiv -> "OpDiv"
 
 (** [comparop_to_string op] returns a string representation of the comparison operator [op]. *)
 let comparop_to_string = function
-  | OpLesst -> "<"
-  | OpGreat -> ">"
-  | OpEqual -> "=="
-  | OpNotEqual -> "!="
+  | OpLesst -> "OpLesst"
+  | OpGreat -> "OpGreat"
+  | OpEqual -> "OpEqual"
+  | OpNotEqual -> "OpNotEqual"
 
 (** [logicop_to_string op] returns a string representation of the logical operator [op]. *)
 let logicop_to_string = function
-  | OpAnd -> "&&"
-  | OpOr -> "||"
+  | OpAnd -> "OpAnd"
+  | OpOr -> "OpOr"
 
 (** [binop_to_string op] returns a string representation of the binary operator [op]. *)
 let binop_to_string = function
@@ -75,7 +75,7 @@ let rec typ_to_string = function
 and typ_list_to_string = function
   | [] -> ""
   | [x] -> sprintf "%s" (typ_to_string x)
-  | x :: r -> sprintf "%s %s" (typ_to_string x) (typ_list_to_string r)
+  | x :: r -> sprintf "%s, %s" (typ_to_string x) (typ_list_to_string r)
 
 (** [list_to_string l] returns a string representation of the list [l]. *)
 let list_to_string f prefix l =
@@ -113,14 +113,14 @@ and raw_expression_to_string prefix e =
         (expression_to_string prefix' e)
   | EUnOp (uop, e) ->
       sprintf
-        "EUnOp '%s'\n%s%s%s"
+        "EUnOp (%s)\n%s%s%s"
         (unop_to_string uop)
         prefix'
         branch_end
         (expression_to_string prefix' e)
   | EBinOp (op, e1, e2) ->
       sprintf
-        "EBinop '%s'\n%s%s%s\n%s%s%s"
+        "EBinop (%s)\n%s%s%s\n%s%s%s"
         (binop_to_string op)
         prefix'
         branch
