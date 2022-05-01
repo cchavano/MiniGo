@@ -5,6 +5,10 @@
   
   exception Error of string
 
+  (* Go keywords table *)
+  (* All ident-like tokens are grouped under the same rule, then, thanks to this table, the lexer
+     checks if the identifier is a Go keyword or not. It helps reducing the size of
+     the generated automata (cf https://www.lri.fr/~conchon/OMED/3/ocamllex.pdf). *)
   let keywords = Hashtbl.create 14
 
   let () =
@@ -18,6 +22,7 @@
 
   let error msg = raise @@ Error msg
 
+  (* Reference to the last analyzed token *)
   let prev_token = ref (Option.none)
 
   let tok token = prev_token := Option.some token; token
@@ -39,6 +44,9 @@ rule read_token = parse
   | "//" [^'\n']* '\n'
   | '\n'
     { 
+      (* Semicolons are not mandatory in Go. In short, the lexer automatically inserts a semicolon into the
+         token stream after a line's final token if that token could end a statement. More details are given
+         in the Go documentation: https://go.dev/ref/spec#Semicolons. *)
       let move lexbuf = new_line lexbuf; read_token lexbuf in
       let add_semi lexbuf = function
         | IDENT _
