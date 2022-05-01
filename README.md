@@ -6,17 +6,23 @@ It has been made as part of the compilation course taught in the 4th year of the
 ## Requirements
 
 ### Hardware
+
 This project is meant to be run on a **64-bit** CPU.
 
 ### Software
 
-The following `opam` packages need to be installed:
+This project may only run on a unix-like operating system (Linux, macOS, BSD...).
+
+1. Install the OCaml package manager `opam` by following the [opam documentation](https://opam.ocaml.org/).
+
+2. Install the following `opam` packages with the `opam install` command: 
 ```text
-ocaml (version 4.x)
-dune  (version 3.x)
+ocaml  (version 4.x)
+dune   (version 3.x)
+menhir (version 20220210)
 ```
 
-The following system packages need to be installed:
+3. Install the following system packages with your OS package manager:
 ```text
 gcc or clang
 make
