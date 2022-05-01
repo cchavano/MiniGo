@@ -866,6 +866,19 @@ and check_used_var env vdecl =
 (** [check_func env func] returns an [Ast_typ] function if the [Ast_loc] function definition [func]
     is valid within the environment [env] and where [pkgs] is the set of imported packages. *)
 let check_func env (func : Ast_loc.func) pkgs =
+  let param_index = ref (-1) in
+  let rec check_param_duplicates param_names =
+    match param_names with
+    | [] | [_] -> ()
+    | x :: r ->
+        param_index := !param_index + 1;
+        if List.mem x r then
+          let id = fst (List.nth func.params !param_index) in
+          error id (sprintf "other declaration of %s" id.content)
+        else check_param_duplicates r
+  in
+  let param_names = List.map (fun (id, _) -> id.content) func.params in
+  check_param_duplicates param_names;
   let params = List.map (fun (id, typ) -> (id.content, typ)) func.params in
   List.map
     (fun p ->

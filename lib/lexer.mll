@@ -1,6 +1,7 @@
 {  
   open Lexing
   open Parser
+  open Printf
   
   exception Error of string
 
@@ -25,13 +26,12 @@
 let digit = ['0'-'9']
 let letter = ['a'-'z''A'-'Z']
 let space = [' ''\t''\r']
-let ponctuation = ['!''.'':'','';''?']
 
 let int_lit = (digit (digit | '_')*)* digit
 let float_lit = (int_lit '.' int_lit?) | (int_lit? '.' int_lit)
 let imag_lit = (int_lit | float_lit) 'i'
 let bool_lit = "true" | "false"
-let string_lit = '"' (letter | digit | space | ponctuation | '_' )* '"'
+let string_lit = '"' [^'"']* '"'
 
 let ident = letter (letter | digit | '_')*
 
@@ -78,14 +78,14 @@ rule read_token = parse
       try
         tok @@ INT_LIT (Int64.of_string i)
       with Failure _ ->
-        error (Printf.sprintf "int literal '%s' overflows the maximum value of int64" i)   
+        error (sprintf "int literal '%s' overflows the maximum value of int64" i)   
     }
   | float_lit as f
     {
       try
         tok @@ FLOAT_LIT (float_of_string f)
       with Failure _ ->
-        error (Printf.sprintf "invalid float literal '%s'" f)
+        error (sprintf "invalid float literal '%s'" f)
     }
   | imag_lit as im
     {
@@ -93,10 +93,20 @@ rule read_token = parse
         let imag_part = String.sub im 0 (String.length im - 1) in
         tok @@ IMAG_LIT (float_of_string imag_part)
       with Failure _ ->
-          error (Printf.sprintf "invalid imaginary literal '%s'" im)
+          error (sprintf "invalid imaginary literal '%s'" im)
     }
   | bool_lit as b   { tok @@ BOOL_LIT (bool_of_string b) }
-  | string_lit as s { tok @@ STRING_LIT s }
+  | string_lit as s
+    {
+      let forbidden_chars = ['%'; '\\'] in
+      List.iter
+        (fun c ->
+          if String.contains s c then
+            error (sprintf "illegal character '%c' in string literal %s" c s)
+          else ()) 
+        forbidden_chars;
+      tok @@ STRING_LIT s
+    }
   | ident as id
     {
       try
@@ -111,7 +121,7 @@ rule read_token = parse
   | eof { tok EOF }
   | _ as c
     {
-      error (Printf.sprintf "illegal character '%s'" (String.make 1 c))
+      error (sprintf "illegal character '%s'" (String.make 1 c))
     }
 
 and read_comment = parse

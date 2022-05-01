@@ -90,11 +90,11 @@ let rec expression_2c venv fenv e =
     match e.raw with
     | ELiteral lit -> literal_2c lit
     | EIdentRef id ->
-        let prefix = if StringSet.mem id venv then "_" else "def_" in
+        let prefix = if StringSet.mem id venv then "v_" else "def_" in
         prefix ^ id
     | EFuncCall (id, args) ->
         let sid =
-          if StringSet.mem id venv then "_" ^ id
+          if StringSet.mem id venv then "v_" ^ id
           else if StringSet.mem id fenv then if id = "main" then id else "def_" ^ id
           else
             sprintf
@@ -143,9 +143,9 @@ let rec statement_2c prefix venv fenv s =
   | StVarDecl (id, typ, e) ->
       let sdecl =
         match typ with
-        | TypBasic b1 -> sprintf "%s _%s" (basic_typ_2c b1) id
+        | TypBasic b1 -> sprintf "%s v_%s" (basic_typ_2c b1) id
         | TypFunc (l, t) ->
-            sprintf "%s%s (*_%s) (%s)" prefix (typ_option_2c t) id (typ_list_2c l)
+            sprintf "%s%s (*v_%s) (%s)" prefix (typ_option_2c t) id (typ_list_2c l)
       in
       let sinit = expression_init_2c venv fenv typ e in
       (sprintf "%s%s = %s;" prefix' sdecl sinit, StringSet.add id venv)
@@ -168,9 +168,9 @@ let rec statement_2c prefix venv fenv s =
             sprintf
               "%sstring_assign(%s, %s);"
               prefix'
-              ("_" ^ id)
+              ("v_" ^ id)
               (expression_2c venv fenv e)
-        | _ -> sprintf "%s_%s = %s;" prefix' id (expression_2c venv fenv e)
+        | _ -> sprintf "%sv_%s = %s;" prefix' id (expression_2c venv fenv e)
       in
       (sassign, venv)
   | StBlock sl ->
@@ -256,9 +256,9 @@ and statement_list_2c prefix venv fenv l =
 let func_2c fenv func =
   let func_param_2c param =
     match snd param with
-    | TypBasic _ -> sprintf "%s _%s" (typ_2c @@ snd param) (fst param)
+    | TypBasic _ -> sprintf "%s v_%s" (typ_2c @@ snd param) (fst param)
     | TypFunc (l, t) ->
-        sprintf "%s (*_%s) (%s)" (typ_option_2c t) (fst param) (typ_list_2c l)
+        sprintf "%s (*v_%s) (%s)" (typ_option_2c t) (fst param) (typ_list_2c l)
   in
   let venv = List.map (fun p -> fst p) func.params |> StringSet.of_list in
   let sl, venv' = statement_list_2c "" venv fenv func.body in
